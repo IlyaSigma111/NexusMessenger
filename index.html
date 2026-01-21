@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Messenger</title>
+    
+    <!-- Font Awesome для иконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Шрифт Inter как в Figma -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Флаги для статусов -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
+    
+    <!-- PWA мета-теги -->
+    <link rel="manifest" href="data:application/manifest+json,{}">
+    <meta name="theme-color" content="#5865F2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <!-- Наши стили -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Firebase SDK (все в одном) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    
+    <style>
+        /* Критически важные стили для быстрой загрузки */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: #36393F;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Экран загрузки -->
+    <div class="loading-screen">
+        <div class="loader"></div>
+        <h2 style="margin-top: 20px;">Загрузка Nexus Messenger...</h2>
+        <p style="opacity: 0.7;">Стили Discord ✦ Дизайн Figma ✦ Удобство Telegram</p>
+    </div>
+
+    <!-- Основной интерфейс -->
+    <div class="app-container" style="display: none;">
+        <!-- Левая панель серверов -->
+        <div class="servers-sidebar">
+            <div class="server-list">
+                <div class="server-item active" data-server="general">
+                    <div class="server-icon">
+                        <i class="fas fa-home"></i>
+                    </div>
+                    <div class="server-tooltip">Главный</div>
+                </div>
+                <div class="server-item" data-server="gaming">
+                    <div class="server-icon">
+                        <i class="fas fa-gamepad"></i>
+                    </div>
+                    <div class="server-tooltip">Игровой</div>
+                </div>
+                <div class="server-item" data-server="music">
+                    <div class="server-icon">
+                        <i class="fas fa-music"></i>
+                    </div>
+                    <div class="server-tooltip">Музыка</div>
+                </div>
+                <div class="server-item" data-server="art">
+                    <div class="server-icon">
+                        <i class="fas fa-palette"></i>
+                    </div>
+                    <div class="server-tooltip">Творчество</div>
+                </div>
+                <div class="server-item" data-server="stream">
+                    <div class="server-icon">
+                        <i class="fas fa-broadcast-tower"></i>
+                    </div>
+                    <div class="server-tooltip">Стримы</div>
+                </div>
+                <div class="server-item add-server">
+                    <div class="server-icon">
+                        <i class="fas fa-plus"></i>
+                    </div>
+                    <div class="server-tooltip">Добавить сервер</div>
+                </div>
+            </div>
+            
+            <div class="server-user">
+                <div class="user-avatar-small">
+                    <img src="https://i.pravatar.cc/32" alt="User">
+                    <div class="user-status online"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Основная область -->
+        <div class="main-content">
+            <!-- Панель каналов -->
+            <div class="channels-sidebar">
+                <div class="server-header">
+                    <div class="server-title">
+                        <h2>Nexus Central</h2>
+                        <div class="server-status">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="server-notification">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                </div>
+
+                <!-- Текстовые каналы -->
+                <div class="channels-group">
+                    <div class="group-header">
+                        <span>ТЕКСТОВЫЕ КАНАЛЫ</span>
+                        <button class="add-channel">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="channel-list">
+                        <div class="channel-item active">
+                            <i class="fas fa-hashtag"></i>
+                            <span>general-chat</span>
+                            <div class="channel-actions">
+                                <i class="fas fa-user-plus"></i>
+                            </div>
+                        </div>
+                        <div class="channel-item">
+                            <i class="fas fa-image"></i>
+                            <span>memes</span>
+                            <span class="unread-count">3</span>
+                        </div>
+                        <div class="channel-item">
+                            <i class="fas fa-gamepad"></i>
+                            <span>gaming</span>
+                        </div>
+                        <div class="channel-item">
+                            <i class="fas fa-music"></i>
+                            <span>music-talk</span>
+                        </div>
+                        <div class="channel-item">
+                            <i class="fas fa-question-circle"></i>
+                            <span>help</span>
+                        </div>
+                        <div class="channel-item">
+                            <i class="fas fa-newspaper"></i>
+                            <span>announcements</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Голосовые каналы -->
+                <div class="channels-group">
+                    <div class="group-header">
+                        <span>ГОЛОСОВЫЕ КАНАЛЫ</span>
+                        <button class="add-channel">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <div class="voice-channel-list">
+                        <div class="voice-channel-item active">
+                            <i class="fas fa-headphones"></i>
+                            <span>General Voice</span>
+                            <span class="voice-users">5</span>
+                        </div>
+                        <div class="voice-channel-item" data-link="https://meet.google.com/new">
+                            <i class="fas fa-headphones"></i>
+                            <span>Gaming Lounge</span>
+                            <span class="voice-users">3</span>
+                        </div>
+                        <div class="voice-channel-item" data-link="https://discord.gg/voice">
+                            <i class="fas fa-headphones"></i>
+                            <span>Music Room</span>
+                            <span class="voice-users">2</span>
+                        </div>
+                        <div class="voice-channel-item" data-link="https://teams.microsoft.com">
+                            <i class="fas fa-headphones"></i>
+                            <span>Stream Chat</span>
+                            <span class="voice-users">1</span>
+                        </div>
+                        <div class="voice-channel-item" data-link="https://zoom.us/j/123456">
+                            <i class="fas fa-headphones"></i>
+                            <span>Meeting Room</span>
+                            <span class="voice-users">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Пользователь -->
+                <div class="user-profile">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            <img src="https://i.pravatar.cc/40" alt="User">
+                            <div class="user-status online"></div>
+                        </div>
+                        <div class="user-details">
+                            <div class="username">Alex#1234</div>
+                            <div class="user-status-text">Online</div>
+                        </div>
+                    </div>
+                    <div class="user-controls">
+                        <button class="control-btn mic-btn">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="control-btn headphone-btn">
+                            <i class="fas fa-headphones"></i>
+                        </button>
+                        <button class="control-btn settings-btn">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Область чата -->
+            <div class="chat-area">
+                <!-- Заголовок чата -->
+                <div class="chat-header">
+                    <div class="channel-header">
+                        <i class="fas fa-hashtag"></i>
+                        <h3>general-chat</h3>
+                        <div class="channel-topic">
+                            <i class="fas fa-comment-alt"></i>
+                            Добро пожаловать в основной чат!
+                        </div>
+                    </div>
+                    <div class="chat-controls">
+                        <div class="search-box">
+                            <input type="text" placeholder="Поиск в чате...">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="header-btn">
+                            <i class="fas fa-user-plus"></i>
+                        </button>
+                        <button class="header-btn">
+                            <i class="fas fa-thumbtack"></i>
+                        </button>
+                        <button class="header-btn">
+                            <i class="fas fa-bell"></i>
+                        </button>
+                        <button class="header-btn members-toggle">
+                            <i class="fas fa-user-friends"></i>
+                            <span class="members-count">12</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Сообщения -->
+                <div class="messages-container">
+                    <!-- Сообщения будут здесь -->
+                </div>
+
+                <!-- Ввод сообщения -->
+                <div class="message-input-area">
+                    <div class="input-attachments">
+                        <button class="attach-btn" title="Прикрепить файл">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        <button class="attach-btn" title="Гифка">
+                            <i class="fas fa-gift"></i>
+                        </button>
+                        <button class="attach-btn" title="Стикер">
+                            <i class="fas fa-sticky-note"></i>
+                        </button>
+                        <button class="attach-btn" title="Эмодзи">
+                            <i class="fas fa-smile"></i>
+                        </button>
+                    </div>
+                    <div class="message-input-wrapper">
+                        <input type="text" 
+                               class="message-input" 
+                               placeholder="Напишите сообщение в #general-chat..."
+                               autocomplete="off">
+                        <div class="input-actions">
+                            <button class="voice-input-btn">
+                                <i class="fas fa-microphone"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button class="send-message-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Панель участников (скрыта на мобилках) -->
+            <div class="members-sidebar">
+                <div class="members-header">
+                    <h4>УЧАСТНИКИ <span class="members-count">12</span></h4>
+                    <button class="invite-btn">
+                        <i class="fas fa-user-plus"></i>
+                    </button>
+                </div>
+                <div class="members-list">
+                    <!-- Участники будут здесь -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Голосовой чат модалка -->
+        <div class="voice-chat-modal">
+            <div class="voice-modal-content">
+                <div class="voice-modal-header">
+                    <div class="voice-channel-info">
+                        <i class="fas fa-headphones"></i>
+                        <h3>General Voice</h3>
+                        <span class="voice-quality">Качество: HD</span>
+                    </div>
+                    <button class="close-voice-modal">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="voice-participants">
+                    <div class="participant">
+                        <div class="participant-avatar">
+                            <img src="https://i.pravatar.cc/50" alt="User">
+                            <div class="participant-status speaking"></div>
+                        </div>
+                        <div class="participant-info">
+                            <div class="participant-name">Alex#1234</div>
+                            <div class="participant-status-text">Говорит...</div>
+                        </div>
+                        <div class="participant-volume">
+                            <div class="volume-bar" style="width: 80%"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="voice-controls">
+                    <button class="voice-control-btn mic-toggle active">
+                        <i class="fas fa-microphone"></i>
+                        <span>Вкл. микрофон</span>
+                    </button>
+                    <button class="voice-control-btn headphones-toggle active">
+                        <i class="fas fa-headphones"></i>
+                        <span>Вкл. звук</span>
+                    </button>
+                    <button class="voice-control-btn connect-telemost" data-link="https://meet.google.com/new">
+                        <i class="fas fa-video"></i>
+                        <span>Подключить телемост</span>
+                    </button>
+                    <button class="voice-control-btn disconnect-btn">
+                        <i class="fas fa-phone-slash"></i>
+                        <span>Отключиться</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Мобильное меню -->
+        <div class="mobile-menu">
+            <button class="mobile-menu-btn channels-toggle">
+                <i class="fas fa-hashtag"></i>
+            </button>
+            <button class="mobile-menu-btn chat-btn active">
+                <i class="fas fa-comment"></i>
+            </button>
+            <button class="mobile-menu-btn voice-btn">
+                <i class="fas fa-headphones"></i>
+            </button>
+            <button class="mobile-menu-btn members-toggle">
+                <i class="fas fa-users"></i>
+            </button>
+            <button class="mobile-menu-btn profile-btn">
+                <i class="fas fa-user"></i>
+            </button>
+        </div>
+
+        <!-- Уведомление -->
+        <div class="notification">
+            <div class="notification-content">
+                <i class="fas fa-bell"></i>
+                <span>Новое сообщение</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем основной скрипт -->
+    <script src="app.js"></script>
+    
+    <script>
+        // Скрываем экран загрузки когда всё готово
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                document.querySelector('.loading-screen').style.opacity = '0';
+                document.querySelector('.app-container').style.display = 'flex';
+                
+                setTimeout(function() {
+                    document.querySelector('.loading-screen').style.display = 'none';
+                }, 300);
+            }, 800);
+        });
+    </script>
+</body>
+</html>
